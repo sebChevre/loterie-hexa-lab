@@ -1,0 +1,5 @@
+https://github.com/iluwatar/java-design-patterns/tree/master/hexagonal
+
+http://java-design-patterns.com/patterns/hexagonal/
+
+http://java-design-patterns.com/blog/build-maintainable-systems-with-hexagonal-architecture/

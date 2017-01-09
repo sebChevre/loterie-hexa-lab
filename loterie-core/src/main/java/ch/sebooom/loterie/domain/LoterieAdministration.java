@@ -1,6 +1,9 @@
 package ch.sebooom.loterie.domain;
 
+import ch.sebooom.loterie.banque.VirementBancaire;
+import ch.sebooom.loterie.eventlog.LoterieEventLog;
 import ch.sebooom.loterie.repository.TicketLoterieRepository;
+import com.google.inject.Inject;
 
 import java.util.Map;
 
@@ -11,44 +14,45 @@ import java.util.Map;
  */
 public class LoterieAdministration {
     private final TicketLoterieRepository repository;
-    private final LotteryEventLog notifications;
-    private final WireTransfers wireTransfers;
+    private final LoterieEventLog notifications;
+    private final VirementBancaire virement;
 
     /**
      * Constructor
      */
     @Inject
-    public LoterieAdministration(LotteryTicketRepository repository, LotteryEventLog notifications,
-                                 WireTransfers wireTransfers) {
+    public LoterieAdministration(TicketLoterieRepository repository, LoterieEventLog notifications,
+                                 VirementBancaire virement) {
         this.repository = repository;
         this.notifications = notifications;
-        this.wireTransfers = wireTransfers;
+        this.virement = virement;
     }
 
     /**
      * Get all the lottery tickets submitted for lottery
      */
     public Map<TicketLoterieId, TicketLoterie> getAllSubmittedTickets() {
+        
         return repository.findAll();
     }
 
     /**
      * Draw lottery numbers
      */
-    public LotteryNumbers performLottery() {
-        LotteryNumbers numbers = LotteryNumbers.createRandom();
-        Map<LotteryTicketId, LotteryTicket> tickets = getAllSubmittedTickets();
-        for (LotteryTicketId id : tickets.keySet()) {
-            LotteryTicketCheckResult result = LotteryUtils.checkTicketForPrize(repository, id, numbers);
-            if (result.getResult().equals(LotteryTicketCheckResult.CheckResult.WIN_PRIZE)) {
-                boolean transferred = wireTransfers.transferFunds(LotteryConstants.PRIZE_AMOUNT,
-                        LotteryConstants.SERVICE_BANK_ACCOUNT, tickets.get(id).getPlayerDetails().getBankAccount());
+    public NumeroLoterie performLottery() {
+        NumeroLoterie numbers = NumeroLoterie.createRandom();
+        Map<TicketLoterieId, TicketLoterie> tickets = getAllSubmittedTickets();
+        for (TicketLoterieId id : tickets.keySet()) {
+            TicketLoterieCheckResultat result = LoterieUtils.checkTicketForPrize(repository, id, numbers);
+            if (result.getResult().equals(TicketLoterieCheckResultat.CheckResultat.GAGNANT)) {
+                boolean transferred = virement.transferFunds(LoterieConstantes.MONTANT_PRIX,
+                        LoterieConstantes.SERVICE_COMPTE_BANCAIRE, tickets.get(id).getPlayerDetails().getBankAccount());
                 if (transferred) {
-                    notifications.ticketWon(tickets.get(id).getPlayerDetails(), LotteryConstants.PRIZE_AMOUNT);
+                    notifications.ticketWon(tickets.get(id).getPlayerDetails(), LoterieConstantes.MONTANT_PRIX);
                 } else {
-                    notifications.prizeError(tickets.get(id).getPlayerDetails(), LotteryConstants.PRIZE_AMOUNT);
+                    notifications.prizeError(tickets.get(id).getPlayerDetails(), LoterieConstantes.MONTANT_PRIX);
                 }
-            } else if (result.getResult().equals(LotteryTicketCheckResult.CheckResult.NO_PRIZE)) {
+            } else if (result.getResult().equals(TicketLoterieCheckResultat.CheckResultat.PERDANT)) {
                 notifications.ticketDidNotWin(tickets.get(id).getPlayerDetails());
             }
         }
